@@ -28,6 +28,8 @@
 #define LED_PIN            14
 #define DEBOUNCE_TIME 500 //
 unsigned long lastDebounceTime = 0;
+const char *ssid = "INFINITUME7D8";
+const char *password = "kasumikasumi";
 
 // Variables para el sensor de movimiento
 int motionStateCurrent  = LOW;
@@ -35,44 +37,51 @@ int motionStatePrevious = LOW;
 String serverSmoke = "http://192.168.1.73:7800/smoke";
 String serverName = "http://192.168.1.73:7800/";
 String serverLed = "http://192.168.1.73:7800/led"; 
-String serverMotion = "http://192.168.1.73:7800/motion"; 
+String serverMotion = "http://192.168.1.73:7800/motion";
+String serverBuzzer = "http://192.168.1.73:7800/buzzer"; 
 
 unsigned long lastTime = 0;
 unsigned long timerDelay = 5000;
 
 int contador = 0; // Variable para el contador inicializada en 0
 
-void getLedState()
-{
-  HTTPClient http;
-  http.begin(serverLed);
 
-  int httpResponseCode = http.GET();
+void post_buzzerOn() {
+    HTTPClient http;
+    http.begin(serverBuzzer + "/on"); // URL para encender el buzzer
+    http.addHeader("Content-Type", "application/json");
 
-  if (httpResponseCode == 200)
-  {
-    // Leer el JSON de la respuesta
-    String payload = http.getString();
-    DynamicJsonDocument jsonDoc(1024);
-    deserializeJson(jsonDoc, payload);
+    int httpResponseCode = http.POST("{}"); // Envía una solicitud POST vacía
 
-    // Obtener el estado del LED desde el JSON
-    bool ledState = jsonDoc["status"];
-    
-    // Actualizar el estado del LED en la placa Arduino
-    digitalWrite(LED_PIN, ledState ? HIGH : LOW);
+    if (httpResponseCode > 0) {
+        Serial.print("HTTP Response code (buzzer on): ");
+        Serial.println(httpResponseCode);
+    } else {
+        Serial.print("Error code (buzzer on): ");
+        Serial.println(httpResponseCode);
+    }
 
-    Serial.print("Estado del LED: ");
-    Serial.println(ledState);
-  }
-  else
-  {
-    Serial.print("Error al obtener el estado del LED. Código de respuesta: ");
-    Serial.println(httpResponseCode);
-  }
-
-  http.end();
+    http.end();
 }
+
+void post_buzzerOff() {
+    HTTPClient http;
+    http.begin(serverBuzzer + "/off"); // URL para apagar el buzzer
+    http.addHeader("Content-Type", "application/json");
+
+    int httpResponseCode = http.POST("{}"); // Envía una solicitud POST vacía
+
+    if (httpResponseCode > 0) {
+        Serial.print("HTTP Response code (buzzer off): ");
+        Serial.println(httpResponseCode);
+    } else {
+        Serial.print("Error code (buzzer off): ");
+        Serial.println(httpResponseCode);
+    }
+
+    http.end();
+}
+
 
 void post_motion(bool motionDetected)
 {
@@ -154,7 +163,7 @@ void setup() {
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, LOW); // Apagar el LED al inicio
 
-  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  WiFi.begin(ssid, password);
   Serial.println("Connecting");
   while (WiFi.status() != WL_CONNECTED)
   {
@@ -167,10 +176,16 @@ void setup() {
 
   Serial.println("Timer set to 5 seconds (timerDelay variable), it will take 5 seconds before publishing the first reading.");
 }
+bool buzzerActive = false;
+
 
 void loop() {
-  getLedState();
-
+  //buzzer
+  if (buzzerActive) {
+        playJingleBells();
+    } else {
+        noTone(BUZZER_PASIVO);
+    }
   // Control de tiempo para la solicitud GET (si es necesario)
   if ((millis() - lastTime) > timerDelay) {
     if (WiFi.status() == WL_CONNECTED) {
@@ -218,6 +233,7 @@ void loop() {
 
 
 void playJingleBells() {
+  if (!buzzerActive) return;
 int melodia[] = {
   NOTE_D4, NOTE_D4, NOTE_D5, NOTE_A4, NOTE_GS4, NOTE_G4, NOTE_F4, NOTE_D4, NOTE_F4, NOTE_G4,
   NOTE_C4, NOTE_C4, NOTE_D5, NOTE_A4, NOTE_GS4, NOTE_G4, NOTE_F4, NOTE_D4, NOTE_F4, NOTE_G4,

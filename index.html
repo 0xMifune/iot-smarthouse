@@ -78,16 +78,33 @@
   </div>
 
   <div class="sectionContainer">
-    <h2>Control de LED</h2>
-    <button id="onButton">ON</button>
-    <button id="offButton">OFF</button>
-  </div>
+    <h2>Control del Buzzer</h2>
+    <button id="buzzerOnButton">Encender</button>
+    <button id="buzzerOffButton">Apagar</button>
+</div>
 
   <script>
     const smokeStatus = document.getElementById("smokeStatus");
     const motionStatus = document.getElementById("motionStatus");
-    const onButton = document.getElementById("onButton");
-    const offButton = document.getElementById("offButton");
+    const buzzerOnButton = document.getElementById("buzzerOnButton");
+    const buzzerOffButton = document.getElementById("buzzerOffButton");
+
+    buzzerOnButton.addEventListener("click", () => {
+    fetch("/buzzer/on", { 
+        method: "POST", 
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}) // Agrega un cuerpo vacío para cumplir con el formato POST
+    });
+});
+
+buzzerOffButton.addEventListener("click", () => {
+    fetch("/buzzer/off", { 
+        method: "POST", 
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}) // Agrega un cuerpo vacío para cumplir con el formato POST
+    });
+});
+
 
     const updateStatus = () => {
       fetch("/smoke")
@@ -102,14 +119,6 @@
           motionStatus.textContent = data.motionDetected ? "Detectado" : "No Detectado";
         });
     };
-
-    onButton.addEventListener("click", () => {
-      fetch("/led", { method: "POST", body: JSON.stringify({ status: true }), headers: { "Content-Type": "application/json" }});
-    });
-
-    offButton.addEventListener("click", () => {
-      fetch("/led", { method: "POST", body: JSON.stringify({ status: false }), headers: { "Content-Type": "application/json" }});
-    });
 
     setInterval(updateStatus, 1000);
   </script>

@@ -6,6 +6,7 @@ import os
 ledState = False
 smokeDetected = False
 motionDetected = False
+buzzerActive = False
 
 class MyHTTPRequestHandler(BaseHTTPRequestHandler):
 
@@ -15,7 +16,7 @@ class MyHTTPRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        global ledState, smokeDetected, motionDetected
+        global ledState, smokeDetected, motionDetected, buzzerActive
         print(self.path)
         if self.path == "/":
             try:
@@ -42,14 +43,15 @@ class MyHTTPRequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps({"motionDetected": motionDetected}).encode())
         
         else:
-            self._set_response("application/json", 404)
-            self.wfile.write(json.dumps({"message": "Not found"}).encode())
+            self._set_response("application/json", 500)
+            self.wfile.write(json.dumps({"error": str(e)}).encode())
+
 
     def do_POST(self):
         content_length = int(self.headers["Content-Length"])
         post_data = self.rfile.read(content_length).decode()
 
-        global ledState, smokeDetected, motionDetected
+        global ledState, smokeDetected, motionDetected, buzzerActive
 
         try:
             body_json = json.loads(post_data)
@@ -61,11 +63,18 @@ class MyHTTPRequestHandler(BaseHTTPRequestHandler):
         if self.path == "/smoke":
             smokeDetected = body_json.get("smokeDetected", False)
 
-        elif self.path == "/motion":
+        if self.path == "/motion":
             motionDetected = body_json.get("motionDetected", False)
 
-        elif self.path == "/led":
-            ledState = body_json.get("status", False)
+        if self.path == "/buzzer/on":
+            buzzerActive = True
+            self._set_response("application/json")
+            self.wfile.write(json.dumps({"message": "Buzzer turned on"}).encode())
+
+        if self.path == "/buzzer/off":
+            buzzerActive = False
+            self._set_response("application/json")
+            self.wfile.write(json.dumps({"message": "Buzzer turned off"}).encode())
 
         self._set_response("application/json")
         self.wfile.write(json.dumps({"message": "Data updated successfully"}).encode())
